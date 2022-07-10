@@ -40,6 +40,10 @@ func main() {
 	fogNodePort := os.Getenv("SERVER_HOG_FOG_NODE_PORT")       // Default: ":3444"
 	dataSourceName := os.Getenv("SERVER_HOG_DATA_SOURCE_NAME") // Default: "root:my_fog_password@(172.104.142.115:3306)/my_database"
 
+	if fogNodePort == "" || dataSourceName == "" {
+		log.Fatalln("Environmental variables not initialized.")
+	}
+
 	//// TODO: a future-proof approach would set them functionally upon initialization from a list by either asking the\
 	////   cloud or using a local config file
 	//approvedCameras := []string{
