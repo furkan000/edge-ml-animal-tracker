@@ -1,0 +1,13 @@
+[Unit]
+Description=A small go program, that saves information about animal detections to a database when it receives it from many edge nodes.
+After=network.target
+
+[Service]
+WorkingDirectory=/srv/server_hog/
+ExecStart=/srv/server_hog/hog
+
+Environment=SERVER_HOG_FOG_NODE_PORT=":3444"
+Environment=SERVER_HOG_DATA_SOURCE_NAME="root:my_fog_password@(172.104.142.115:3306)/my_database"
+
+[Install]
+WantedBy=multi-user.target
