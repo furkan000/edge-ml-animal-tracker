@@ -7,7 +7,6 @@ import (
 	"github.com/plgd-dev/go-coap/v2/message"
 	"github.com/plgd-dev/go-coap/v2/tcp"
 	"log"
-	"strings"
 	"time"
 )
 
@@ -15,18 +14,14 @@ const maxBufferLength = 10
 
 // TxHandler is a Transmission Handler
 type TxHandler struct {
-	newChan           chan []byte // communication channel that lead to the
-	currentFogNode    string
-	deviceUUID        int
-	sliceTrackedNames []string
+	newChan        chan []byte // communication channel that lead to the
+	clientIP string
 }
 
 func startAndRunNewTxHandler(target string, deviceUUID int, initialTrackedNames []string) TxHandler {
 	nh := TxHandler{
-		newChan:           make(chan []byte, 25),
-		currentFogNode:    target,
-		deviceUUID:        deviceUUID,
-		sliceTrackedNames: initialTrackedNames,
+		newChan:        make(chan []byte, 25),
+		clientIP: target,
 	}
 
 	go nh.startHandler()
@@ -69,7 +64,7 @@ func (h *TxHandler) startHandler() {
 		}
 
 		// Attempt transmission
-		err := h.sendData(buffer[0])
+		err := h.sendConfig(buffer[0])
 
 		// If transmission failed, block transmission
 		if err != nil {
@@ -91,10 +86,10 @@ func (h *TxHandler) startHandler() {
 	}
 }
 
-func (h TxHandler) sendData(payload []byte) error {
+func (h TxHandler) sendConfig(payload []byte) error {
 	path := "/a"
 
-	co, err := tcp.Dial(h.currentFogNode)
+	co, err := tcp.Dial(h.clientIP)
 	if err != nil {
 		log.Printf("Error dialing: %v\n", err)
 		return err
@@ -113,33 +108,14 @@ func (h TxHandler) sendData(payload []byte) error {
 	return nil
 }
 
-type Animal struct {
-	DetectionID    int     `json:"detection_id"`
-	DeviceUuid     int     `json:"device_uuid"`
-	DetectionTime  string  `json:"detection_time"`
-	DetectedAnimal string  `json:"detected_object"`
-	Temperature    float64 `json:"temperature"`
-}
 
-func (h TxHandler) handleRequest(buf []byte) {
-	// Parse element from json object
-	var animal Animal
-
-	err := json.Unmarshal(buf, &animal)
+func (h TxHandler) sendConfigChangeRequest(animals []string) {
+	// Save list as a json array before resending it
+	buf, err := json.Marshal(animals)
 	if err != nil {
-		log.Fatalln(err)
+		log.Printf("Error config handed to transmittor was faulty: %v\n", err)
 	}
-
-	// add uuid to buffer
-	animal.DeviceUuid = h.deviceUUID
-
-	// check if the detected animal is in the approved list, then put it in the channel
-	for _, val := range h.sliceTrackedNames {
-		if strings.Contains(animal.DetectedAnimal, val) {
-			// put buffer into channel
-			h.newChan <- buf
-			return
-		}
-	}
+	// put buffer into channel
+	h.newChan <- buf
 
 }

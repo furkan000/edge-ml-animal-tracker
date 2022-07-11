@@ -18,8 +18,6 @@ import (
  * This code is used for the small software on the edge, that is tasked with send all the
  */
 
-
-
 func loggingMiddleware(next mux.Handler) mux.Handler {
 	return mux.HandlerFunc(func(w mux.ResponseWriter, r *mux.Message) {
 		log.Printf("ClientAddress %v, %v\n", w.Client().RemoteAddr(), r.String())
@@ -28,14 +26,15 @@ func loggingMiddleware(next mux.Handler) mux.Handler {
 }
 
 func handleA(w mux.ResponseWriter, r *mux.Message) {
-	var animal Animal
-	err := json.NewDecoder(r.Body).Decode(&animal)
+	var animals []string
+	err := json.NewDecoder(r.Body).Decode(&animals)
 	if err != nil {
 		log.Printf("cannot decode json object: %v", err)
 		return
 	}
 
-	// TODO: update list
+	// update list of tracked animals
+	handler.sliceTrackedNames = animals
 
 	err = w.SetResponse(codes.Content, message.TextPlain, bytes.NewReader([]byte("gg fam")))
 	if err != nil {
@@ -43,15 +42,15 @@ func handleA(w mux.ResponseWriter, r *mux.Message) {
 	}
 }
 
-
+var handler TxHandler
 
 func main() {
-	cameraNodeTarget := os.Getenv("CLIENT_HOG_CAMERA_IP") // Default: "localhost:3333"
-	fogNodeTarget := os.Getenv("CLIENT_HOG_SERVER_IP")    // Default: "localhost:3444"
-	deviceUUIDString := os.Getenv("CLIENT_HOG_DEVICE_UUID")    // Default: "352" (Doesn't matter)
-	initialTrackedAnimalsString := os.Getenv("CLIENT_HOG_TRACKED_ANIMALS") // Default: "[\"Bear\",\"Racoon\",\"Gazelle\"]"
+	cameraNodeTarget := os.Getenv("CLIENT_HOG_CAMERA_IP")                       // Default: "localhost:3333"
+	fogNodeTarget := os.Getenv("CLIENT_HOG_SERVER_IP")                          // Default: "localhost:3444"
+	deviceUUIDString := os.Getenv("CLIENT_HOG_DEVICE_UUID")                     // Default: "352" (Doesn't matter)
+	initialTrackedAnimalsString := os.Getenv("CLIENT_HOG_TRACKED_ANIMALS")      // Default: "[\"Bear\",\"Racoon\",\"Gazelle\"]"
 	clientHogConfigRxPort := os.Getenv("CLIENT_HOG_LOCAL_CONFIG_RECEIVER_PORT") // Default: ":3555"
-	if cameraNodeTarget == "" || fogNodeTarget == "" ||  deviceUUIDString == "" {
+	if cameraNodeTarget == "" || fogNodeTarget == "" || deviceUUIDString == "" {
 		log.Fatalln("Environmental variables not initialized.")
 	}
 
@@ -69,7 +68,7 @@ func main() {
 	}
 
 	// start handler
-	handler := startAndRunNewTxHandler(fogNodeTarget, deviceUUID, trackedAnimalsList)
+	handler = startAndRunNewTxHandler(fogNodeTarget, deviceUUID, trackedAnimalsList)
 
 	// Start listener
 	pc, err := net.ListenPacket(
@@ -91,8 +90,8 @@ func main() {
 
 	log.Printf("Server started successfully: %s", cameraNodeTarget)
 
-	// TODO: a future-proof approach would set them functionally upon initialization from a list by either asking the\
-	//   cloud or using a local config file
+	// TODO: a future-proof approach would set them functionally upon initialization from a list by either asking the
+	//   cloud or using a local file, which is directly connected to the slice and changes them upon alteration.
 	approvedCameras := []string{
 		"localhost",
 		"127.0.0.1",

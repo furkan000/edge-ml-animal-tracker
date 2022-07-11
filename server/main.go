@@ -44,10 +44,17 @@ func watchConfigFile(configFile string, clients []string) {
 	if err != nil {
 		log.Fatal("NewWatcher failed: ", err)
 	}
+
+	if len(clients) == 0 {
+		log.Fatalln("Server instance required a list of clients to function.")
+	}
+
 	defer watcher.Close()
 
 	done := make(chan bool)
 	go func() {
+		clientsTx := make([]TxHandler, len(clients))
+
 		defer close(done)
 		for {
 			select {
@@ -74,8 +81,12 @@ func watchConfigFile(configFile string, clients []string) {
 				}
 
 				if len(animals) > 0 {
-					// TODO: send animals to all clients
+					// send animals to all clients
 					log.Println("Sending config file to all clients (Not implemented yet!)")
+					for _, v := range clientsTx {
+						v.sendConfigChangeRequest(animals)
+					}
+				//	use sendConfigChangeRequest in configTxHandler.go --> initialize one instance per client
 				}
 
 			case err, ok := <-watcher.Errors:
@@ -95,29 +106,33 @@ func watchConfigFile(configFile string, clients []string) {
 }
 
 func main() {
-	fogNodePort := os.Getenv("SERVER_HOG_FOG_NODE_PORT")          // Default: ":3444"
-	dataSourceName := os.Getenv("SERVER_HOG_DATA_SOURCE_NAME")    // Default: "root:my_fog_password@(172.104.142.115:3306)/my_database"
-	configFile := os.Getenv("SERVER_HOG_CONFIG_FILE")             // Default: "config.txt"
-	clientsConfigurationIP := os.Getenv("SERVER_HOG_CONFIG_FILE") // Default: Default: "[\"localhost:3555\"]"
+	fogNodePort := os.Getenv("SERVER_HOG_FOG_NODE_PORT")                // Default: ":3444"
+	dataSourceName := os.Getenv("SERVER_HOG_DATA_SOURCE_NAME")          // Default: "root:my_fog_password@(172.104.142.115:3306)/my_database"
+	configFile := os.Getenv("SERVER_HOG_CONFIG_FILE")                   // Default: "config.txt"
+	clientsConfigurationIPString := os.Getenv("SERVER_HOG_CONFIG_FILE") // Default: Default: "[\"localhost:3555\"]"
 
-	if fogNodePort == "" || dataSourceName == "" || configFile == "" || clientsConfigurationIP == "" {
+	if fogNodePort == "" || dataSourceName == "" || configFile == "" || clientsConfigurationIPString == "" {
 		log.Printf("Environmental variables not initialized, using default values")
 		fogNodePort = ":3444"
 		dataSourceName = "root:my_fog_password@(172.104.142.115:3306)/my_database"
 		configFile = "config.txt"
-		clientsConfigurationIP = "[\"localhost:3555\"]"
+		clientsConfigurationIPString = "[\"localhost:3555\"]"
 	}
 
-	//// TODO: a future-proof approach would set them functionally upon initialization from a list by either asking the
-	//    cloud or using a local config file
-	//approvedCameras := []string{
-	//	"localhost",
-	//	"127.0.0.1",
-	//}
+	var clientsConfigurationIP []string
+	err := json.Unmarshal([]byte(clientsConfigurationIPString), &clientsConfigurationIP)
+	if err != nil {
+		log.Fatalf("Issues reading client config: %v\n", err)
+	}
+
+	if len(clientsConfigurationIP) == 0 {
+		log.Fatalln("Cannot start a server without setting its clients (cameras) statically. We realize that this" +
+			"isn't best practice, but that should suffice for a prototype.")
+	}
 
 	// watch config file, and send information in case it is altered.
 	// The config file contains a list of all the animals, which we're keeping track of.
-	go watchConfigFile(configFile, []string{})
+	go watchConfigFile(configFile, clientsConfigurationIP)
 
 	// start receiver handler (handler that adds items to database)
 	globalReceiverHandler = startAndRunNewRxHandler(dataSourceName)
@@ -125,7 +140,7 @@ func main() {
 	// start coap listener
 	r := mux.NewRouter()
 	r.Use(loggingMiddleware)
-	err := r.Handle("/a", mux.HandlerFunc(handleA))
+	err = r.Handle("/a", mux.HandlerFunc(handleA))
 	if err != nil {
 		return
 	}
