@@ -1,0 +1,15 @@
+Bear
+Bobcat
+Racoon
+Gazelle
+Moose
+Dog
+Human
+Hunter
+Man
+Woman
+Child
+Cat
+Pig
+Swine
+Hog

@@ -3,6 +3,7 @@ module example.com/mod
 go 1.18
 
 require (
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/plgd-dev/go-coap/v2 v2.6.0
 )

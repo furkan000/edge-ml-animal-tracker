@@ -1,9 +1,16 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"github.com/plgd-dev/go-coap/v2"
+	"github.com/plgd-dev/go-coap/v2/message"
+	"github.com/plgd-dev/go-coap/v2/message/codes"
+	"github.com/plgd-dev/go-coap/v2/mux"
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -11,15 +18,58 @@ import (
  * This code is used for the small software on the edge, that is tasked with send all the
  */
 
+
+
+func loggingMiddleware(next mux.Handler) mux.Handler {
+	return mux.HandlerFunc(func(w mux.ResponseWriter, r *mux.Message) {
+		log.Printf("ClientAddress %v, %v\n", w.Client().RemoteAddr(), r.String())
+		next.ServeCOAP(w, r)
+	})
+}
+
+func handleA(w mux.ResponseWriter, r *mux.Message) {
+	var animal Animal
+	err := json.NewDecoder(r.Body).Decode(&animal)
+	if err != nil {
+		log.Printf("cannot decode json object: %v", err)
+		return
+	}
+
+	// TODO: update list
+
+	err = w.SetResponse(codes.Content, message.TextPlain, bytes.NewReader([]byte("gg fam")))
+	if err != nil {
+		log.Printf("cannot set response: %v", err)
+	}
+}
+
+
+
 func main() {
 	cameraNodeTarget := os.Getenv("CLIENT_HOG_CAMERA_IP") // Default: "localhost:3333"
 	fogNodeTarget := os.Getenv("CLIENT_HOG_SERVER_IP")    // Default: "localhost:3444"
-	if cameraNodeTarget == "" || fogNodeTarget == "" {
+	deviceUUIDString := os.Getenv("CLIENT_HOG_DEVICE_UUID")    // Default: "352" (Doesn't matter)
+	initialTrackedAnimalsString := os.Getenv("CLIENT_HOG_TRACKED_ANIMALS") // Default: "[\"Bear\",\"Racoon\",\"Gazelle\"]"
+	clientHogConfigRxPort := os.Getenv("CLIENT_HOG_LOCAL_CONFIG_RECEIVER_PORT") // Default: ":3555"
+	if cameraNodeTarget == "" || fogNodeTarget == "" ||  deviceUUIDString == "" {
 		log.Fatalln("Environmental variables not initialized.")
 	}
 
+	deviceUUID, err := strconv.Atoi(deviceUUIDString)
+
+	if err != nil {
+		log.Fatalf("deviceUUID invalid: %v", err)
+	}
+
+	var trackedAnimalsList []string
+
+	err = json.Unmarshal([]byte(initialTrackedAnimalsString), &trackedAnimalsList)
+	if err != nil {
+		return
+	}
+
 	// start handler
-	handler := startAndRunNewTxHandler(fogNodeTarget)
+	handler := startAndRunNewTxHandler(fogNodeTarget, deviceUUID, trackedAnimalsList)
 
 	// Start listener
 	pc, err := net.ListenPacket(
@@ -47,6 +97,18 @@ func main() {
 		"localhost",
 		"127.0.0.1",
 	}
+
+	// add listener, that is responsible for setting the list of tracked animals
+	go func() {
+		r := mux.NewRouter()
+		r.Use(loggingMiddleware)
+		err = r.Handle("/a", mux.HandlerFunc(handleA))
+		if err != nil {
+			return
+		}
+
+		log.Fatal(coap.ListenAndServe("tcp", clientHogConfigRxPort, r))
+	}()
 
 	for {
 		p := make([]byte, 1500)

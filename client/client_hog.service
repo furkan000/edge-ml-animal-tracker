@@ -8,6 +8,9 @@ ExecStart=/srv/client_hog/hog
 
 Environment=CLIENT_HOG_CAMERA_IP="localhost:3333"
 Environment=CLIENT_HOG_SERVER_IP="localhost:3444"
+Environment=CLIENT_HOG_DEVICE_UUID="534"
+Environment=CLIENT_HOG_TRACKED_ANIMALS="[\"Bear\",\"Racoon\",\"Gazelle\"]"
+Environment=CLIENT_HOG_LOCAL_CONFIG_RECEIVER_PORT=":3555"
 
 [Install]
 WantedBy=multi-user.target

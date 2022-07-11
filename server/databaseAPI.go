@@ -8,9 +8,9 @@ import (
 
 type Animal struct {
 	DetectionID    int     `json:"detection_id"`
-	CameraUuid     int     `json:"camera_uuid"`
+	DeviceUuid     int     `json:"device_uuid"`
 	DetectionTime  string  `json:"detection_time"`
-	DetectedAnimal string  `json:"Detected_object"`
+	DetectedAnimal string  `json:"detected_object"`
 	Temperature    float64 `json:"temperature"`
 }
 
@@ -35,7 +35,7 @@ func NewAnimalDBInstance(dataSourceName string) (*AnimalDB, error) {
 	// initiate the addRowStatement
 	dbInstance.addRowStatement, err =
 		dbInstance.database.Prepare(
-			"INSERT INTO detected_animals (detection_id, camera_uuid, detection_time, detected_animal, temperature) VALUES (?, ?, ?, ?, ?)")
+			"INSERT INTO detected_animals (detection_id, device_uuid, detection_time, detected_animal, temperature) VALUES (?, ?, ?, ?, ?)")
 
 	if err != nil {
 		log.Fatalln(err)
@@ -71,12 +71,12 @@ func (db *AnimalDB) InsertRow(animal Animal) error {
 	log.Printf(
 		"Inserting new detection to database: %s,\t%s,\t%s",
 		animal.DetectionTime,
-		animal.CameraUuid,
+		animal.DeviceUuid,
 		animal.DetectedAnimal)
 
 	_, err := db.addRowStatement.Exec(
 		0,
-		animal.CameraUuid,
+		animal.DeviceUuid,
 		animal.DetectionTime,
 		animal.DetectedAnimal,
 		animal.Temperature)
@@ -128,7 +128,7 @@ func scanAnimalsFromRows(rows *sql.Rows) ([]Animal, error) {
 		animal := Animal{}
 		err := rows.Scan(
 			&animal.DetectionID,
-			&animal.CameraUuid,
+			&animal.DeviceUuid,
 			&animal.DetectionTime,
 			&animal.DetectedAnimal,
 			&animal.Temperature,

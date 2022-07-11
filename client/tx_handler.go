@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"github.com/plgd-dev/go-coap/v2/message"
 	"github.com/plgd-dev/go-coap/v2/tcp"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -15,12 +17,16 @@ const maxBufferLength = 10
 type TxHandler struct {
 	newChan        chan []byte // communication channel that lead to the
 	currentFogNode string
+	deviceUUID	   int
+	sliceTrackedNames []string
 }
 
-func startAndRunNewTxHandler(target string) TxHandler {
+func startAndRunNewTxHandler(target string, deviceUUID int, initialTrackedNames []string) TxHandler {
 	nh := TxHandler{
 		newChan:        make(chan []byte, 25),
 		currentFogNode: "",
+		deviceUUID: deviceUUID,
+		sliceTrackedNames: initialTrackedNames,
 	}
 
 	go nh.startHandler(target)
@@ -110,7 +116,36 @@ func (h TxHandler) sendData(payload []byte) error {
 	return nil
 }
 
+
+type Animal struct {
+	DetectionID   int    `json:"detection_id"`
+	DeviceUuid    int    `json:"device_uuid"`
+	DetectionTime string `json:"detection_time"`
+	DetectedAnimal string  `json:"detected_object"`
+	Temperature    float64 `json:"temperature"`
+}
+
+
 func (h TxHandler) handleRequest(buf []byte) {
-	// put buffer into channel
-	h.newChan <- buf
+	// Parse element from json object
+	var animal Animal
+
+	err := json.Unmarshal(buf, &animal)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// add uuid to buffer
+	animal.DeviceUuid = h.deviceUUID
+
+	// check if the detected animal is in the approved list, then put it in the channel
+	for _, val := range h.sliceTrackedNames {
+		if strings.Contains(animal.DetectedAnimal, val) {
+			// put buffer into channel
+			h.newChan <- buf
+			return
+		}
+	}
+
+
 }

@@ -30,13 +30,6 @@ func (h *RxHandler) startHandler(dataSourceName string) {
 		// Wait for the next message.
 		animal := <-h.newChan
 
-		// Parse element from json object
-		//var animal Animal
-		//err := json.Unmarshal(element, &animal)
-		if err != nil {
-			log.Fatalln(err)
-		}
-
 		// add to element to database
 		err = animalDB.InsertRow(animal)
 		if err != nil {

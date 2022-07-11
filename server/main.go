@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"log"
 	"os"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/plgd-dev/go-coap/v2"
 	"github.com/plgd-dev/go-coap/v2/message"
 	"github.com/plgd-dev/go-coap/v2/message/codes"
@@ -37,22 +39,85 @@ func handleA(w mux.ResponseWriter, r *mux.Message) {
 	}
 }
 
-func main() {
-	fogNodePort := os.Getenv("SERVER_HOG_FOG_NODE_PORT")       // Default: ":3444"
-	dataSourceName := os.Getenv("SERVER_HOG_DATA_SOURCE_NAME") // Default: "root:my_fog_password@(172.104.142.115:3306)/my_database"
+func watchConfigFile(configFile string, clients []string) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal("NewWatcher failed: ", err)
+	}
+	defer watcher.Close()
 
-	if fogNodePort == "" || dataSourceName == "" {
+	done := make(chan bool)
+	go func() {
+		defer close(done)
+		for {
+			select {
+			case _, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+				// read config file and send its content to the clients, if it's content is valid
+				file, err := os.Open(configFile)
+				if err != nil {
+					log.Printf("Error occured reading config: %v\n", err)
+					continue
+				}
+
+				var animals []string
+				scanner := bufio.NewScanner(file)
+				for scanner.Scan() {
+					animals = append(animals, scanner.Text())
+				}
+
+				err = file.Close()
+				if err != nil {
+					log.Printf("Error occured closing config file: %v\n", err)
+				}
+
+				if len(animals) > 0 {
+					// TODO: send animals to all clients
+					log.Println("Sending config file to all clients (Not implemented yet!)")
+				}
+
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				log.Println("error while watching config file:", err)
+			}
+		}
+	}()
+
+	err = watcher.Add(configFile)
+	if err != nil {
+		log.Fatal("Add failed:", err)
+	}
+
+}
+
+func main() {
+	fogNodePort := os.Getenv("SERVER_HOG_FOG_NODE_PORT")          // Default: ":3444"
+	dataSourceName := os.Getenv("SERVER_HOG_DATA_SOURCE_NAME")    // Default: "root:my_fog_password@(172.104.142.115:3306)/my_database"
+	configFile := os.Getenv("SERVER_HOG_CONFIG_FILE")             // Default: "config.txt"
+	clientsConfigurationIP := os.Getenv("SERVER_HOG_CONFIG_FILE") // Default: Default: "[\"localhost:3555\"]"
+
+	if fogNodePort == "" || dataSourceName == "" || configFile == "" || clientsConfigurationIP == "" {
 		log.Printf("Environmental variables not initialized, using default values")
 		fogNodePort = ":3444"
 		dataSourceName = "root:my_fog_password@(172.104.142.115:3306)/my_database"
+		configFile = "config.txt"
+		clientsConfigurationIP = "[\"localhost:3555\"]"
 	}
 
-	//// TODO: a future-proof approach would set them functionally upon initialization from a list by either asking the\
-	////   cloud or using a local config file
+	//// TODO: a future-proof approach would set them functionally upon initialization from a list by either asking the
+	//    cloud or using a local config file
 	//approvedCameras := []string{
 	//	"localhost",
 	//	"127.0.0.1",
 	//}
+
+	// watch config file, and send information in case it is altered.
+	// The config file contains a list of all the animals, which we're keeping track of.
+	go watchConfigFile(configFile, []string{})
 
 	// start receiver handler (handler that adds items to database)
 	globalReceiverHandler = startAndRunNewRxHandler(dataSourceName)
