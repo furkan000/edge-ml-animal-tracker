@@ -1,0 +1,13 @@
+[Unit]
+Description=A small go program, that receives information about animal detections from our python instance and then forwards them to the fog node.
+After=network.target
+
+[Service]
+WorkingDirectory=/srv/client_hog/
+ExecStart=/srv/client_hog/hog
+
+Environment=CLIENT_HOG_CAMERA_IP="localhost:3333"
+Environment=CLIENT_HOG_SERVER_IP="localhost:3444"
+
+[Install]
+WantedBy=multi-user.target
