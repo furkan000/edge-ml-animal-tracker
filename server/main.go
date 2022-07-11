@@ -3,12 +3,13 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"log"
+	"os"
+
 	"github.com/plgd-dev/go-coap/v2"
 	"github.com/plgd-dev/go-coap/v2/message"
 	"github.com/plgd-dev/go-coap/v2/message/codes"
 	"github.com/plgd-dev/go-coap/v2/mux"
-	"log"
-	"os"
 )
 
 var globalReceiverHandler RxHandler
@@ -41,7 +42,9 @@ func main() {
 	dataSourceName := os.Getenv("SERVER_HOG_DATA_SOURCE_NAME") // Default: "root:my_fog_password@(172.104.142.115:3306)/my_database"
 
 	if fogNodePort == "" || dataSourceName == "" {
-		log.Fatalln("Environmental variables not initialized.")
+		log.Printf("Environmental variables not initialized, using default values")
+		fogNodePort = ":3444"
+		dataSourceName = "root:my_fog_password@(172.104.142.115:3306)/my_database"
 	}
 
 	//// TODO: a future-proof approach would set them functionally upon initialization from a list by either asking the\
