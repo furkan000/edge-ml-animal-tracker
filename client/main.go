@@ -3,15 +3,16 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/plgd-dev/go-coap/v2"
-	"github.com/plgd-dev/go-coap/v2/message"
-	"github.com/plgd-dev/go-coap/v2/message/codes"
-	"github.com/plgd-dev/go-coap/v2/mux"
 	"log"
 	"net"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/plgd-dev/go-coap/v2"
+	"github.com/plgd-dev/go-coap/v2/message"
+	"github.com/plgd-dev/go-coap/v2/message/codes"
+	"github.com/plgd-dev/go-coap/v2/mux"
 )
 
 /**
@@ -50,8 +51,13 @@ func main() {
 	deviceUUIDString := os.Getenv("CLIENT_HOG_DEVICE_UUID")                     // Default: "352" (Doesn't matter)
 	initialTrackedAnimalsString := os.Getenv("CLIENT_HOG_TRACKED_ANIMALS")      // Default: "[\"Bear\",\"Racoon\",\"Gazelle\"]"
 	clientHogConfigRxPort := os.Getenv("CLIENT_HOG_LOCAL_CONFIG_RECEIVER_PORT") // Default: ":3555"
-	if cameraNodeTarget == "" || fogNodeTarget == "" || deviceUUIDString == "" {
-		log.Fatalln("Environmental variables not initialized.")
+	if cameraNodeTarget == "" || fogNodeTarget == "" || deviceUUIDString == "" || initialTrackedAnimalsString == "" || clientHogConfigRxPort == "" {
+		log.Printf("Environmental variables not initialized correctly, using default values")
+		cameraNodeTarget = "localhost:3333"
+		fogNodeTarget = "localhost:3444"
+		deviceUUIDString = "352"
+		initialTrackedAnimalsString = "[\"Bear\",\"Racoon\",\"Gazelle\"]"
+		clientHogConfigRxPort = ":3555"
 	}
 
 	deviceUUID, err := strconv.Atoi(deviceUUIDString)

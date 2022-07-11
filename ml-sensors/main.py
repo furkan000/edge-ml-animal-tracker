@@ -67,16 +67,14 @@ with torch.no_grad():
         frame_count += 1
         now = time.time()
         if now - last_logged > 1:
-            print()
-            print(f"{frame_count / (now-last_logged)} fps")
+            # print(f"{frame_count / (now-last_logged)} fps")
             last_logged = now
             frame_count = 0
             
             top = list(enumerate(output[0].softmax(dim=0)))
             top.sort(key=lambda x: x[1], reverse=True)
-            for idx, val in top[:1]:
-                print(f"{val.item()*100:.2f}% {classes[idx]}")
-            
+            # for idx, val in top[:1]:
+                # print(f"{val.item()*100:.2f}% {classes[idx]}")
             
             deteced_object = classes[top[0][0]]
             temperature = random.randint(2200, 2300) / 100.0

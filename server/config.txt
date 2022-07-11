@@ -13,3 +13,4 @@ Cat
 Pig
 Swine
 Hog
+teddy, teddy bear
