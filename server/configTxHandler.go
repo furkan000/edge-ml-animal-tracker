@@ -68,7 +68,7 @@ func (h *TxHandler) startHandler() {
 
 		// If transmission failed, block transmission
 		if err != nil {
-			log.Println("Transmission failed: Unable to connect with target. Must retry later.")
+			log.Printf("Transmission failed: Unable to connect with target with IP %s. Must retry later.\n", h.clientIP)
 
 			// increasing timeouts to avoid DDoS
 			time.Sleep(timeoutArray[failures] * time.Millisecond)
