@@ -1,6 +1,3 @@
-# Source Code partially taken from: https://github.com/pytorch/tutorials/blob/master/intermediate_source/realtime_rpi.rst
-# the above code is licensed under the BSD-3-Clause license (permissive license)
-
 import time
 
 import torch
