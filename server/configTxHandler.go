@@ -14,13 +14,13 @@ const maxBufferLength = 10
 
 // TxHandler is a Transmission Handler
 type TxHandler struct {
-	newChan        chan []byte // communication channel that lead to the
+	newChan  chan []byte // communication channel that lead to the
 	clientIP string
 }
 
-func startAndRunNewTxHandler(target string, deviceUUID int, initialTrackedNames []string) TxHandler {
+func startAndRunNewTxHandler(target string) TxHandler {
 	nh := TxHandler{
-		newChan:        make(chan []byte, 25),
+		newChan:  make(chan []byte, 25),
 		clientIP: target,
 	}
 
@@ -32,8 +32,8 @@ func startAndRunNewTxHandler(target string, deviceUUID int, initialTrackedNames 
 func (h *TxHandler) startHandler() {
 	buffer := make([][]byte, 0, maxBufferLength+1)
 
-	// Timeout waiting time of 50ms, 0.25s, 0.5s, 1s, 1.5s, 4s, 7s
-	timeoutArray := [7]time.Duration{50, 250, 500, 1000, 1500, 4000, 7000}
+	// Timeout waiting time of 1s, 1.5s, 4s, 7s, 10s, 12s
+	timeoutArray := [7]time.Duration{500, 1000, 1500, 4000, 7000, 10000, 12000}
 	failures := 0
 
 	for {
@@ -107,7 +107,6 @@ func (h TxHandler) sendConfig(payload []byte) error {
 	log.Printf("Response payload: %v", resp.String())
 	return nil
 }
-
 
 func (h TxHandler) sendConfigChangeRequest(animals []string) {
 	// Save list as a json array before resending it

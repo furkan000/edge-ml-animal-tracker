@@ -133,13 +133,20 @@ func (h TxHandler) handleRequest(buf []byte) {
 	// add uuid to buffer
 	animal.DeviceUuid = h.deviceUUID
 
+	buf, err = json.Marshal(animal)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	// check if the detected animal is in the approved list, then put it in the channel
 	for _, val := range h.sliceTrackedNames {
-		if strings.Contains(animal.DetectedAnimal, val) {
+		if strings.Contains(strings.ToLower(animal.DetectedAnimal), strings.ToLower(val)) {
 			// put buffer into channel
+			log.Printf("Animal is in of to be observed list! Sending it over: %s\n", string(buf))
 			h.newChan <- buf
 			return
 		}
 	}
+	log.Printf("Animal \"%s\" not in observed list! NOT sending it over.\n", animal.DetectedAnimal)
 
 }

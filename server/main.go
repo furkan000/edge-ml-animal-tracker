@@ -6,8 +6,9 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"reflect"
+	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/plgd-dev/go-coap/v2"
 	"github.com/plgd-dev/go-coap/v2/message"
 	"github.com/plgd-dev/go-coap/v2/message/codes"
@@ -39,80 +40,85 @@ func handleA(w mux.ResponseWriter, r *mux.Message) {
 	}
 }
 
-func watchConfigFile(configFile string, clients []string) {
-	watcher, err := fsnotify.NewWatcher()
+func readAnimalsFromFile(configFile string) ([]string, error) {
+	file, err := os.Open(configFile)
 	if err != nil {
-		log.Fatal("NewWatcher failed: ", err)
+		log.Printf("Error occured reading config: %v\n", err)
+		return nil, err
 	}
 
+	var animals []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		animals = append(animals, scanner.Text())
+	}
+
+	err = file.Close()
+	if err != nil {
+		log.Printf("Error occured closing config file: %v\n", err)
+		return nil, err
+	}
+
+	return animals, nil
+}
+
+func watchConfigFile(configFile string, clients []string) {
 	if len(clients) == 0 {
 		log.Fatalln("Server instance required a list of clients to function.")
 	}
 
-	defer watcher.Close()
+	clientsTx := make([]TxHandler, len(clients))
+	for i, val := range clients {
+		clientsTx[i] = startAndRunNewTxHandler(val)
+	}
 
-	done := make(chan bool)
 	go func() {
-		clientsTx := make([]TxHandler, len(clients))
+		curAnimals, err := readAnimalsFromFile(configFile)
+		if err != nil {
+			log.Fatalln("couldn't read line.")
+		}
 
-		defer close(done)
+		if len(curAnimals) > 0 {
+			// send animals to all clients
+			log.Println("Sending config file to all clients")
+			for _, v := range clientsTx {
+				v.sendConfigChangeRequest(curAnimals)
+			}
+		}
+
 		for {
-			select {
-			case _, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				// read config file and send its content to the clients, if it's content is valid
-				file, err := os.Open(configFile)
-				if err != nil {
-					log.Printf("Error occured reading config: %v\n", err)
-					continue
-				}
+			time.Sleep(10 * time.Second)
 
-				var animals []string
-				scanner := bufio.NewScanner(file)
-				for scanner.Scan() {
-					animals = append(animals, scanner.Text())
-				}
+			// read config file and send its content to the clients, if it's content is valid
+			animals, err := readAnimalsFromFile(configFile)
+			if err != nil {
+				log.Fatalln("couldn't read line.")
+			}
 
-				err = file.Close()
-				if err != nil {
-					log.Printf("Error occured closing config file: %v\n", err)
-				}
-
+			if !reflect.DeepEqual(curAnimals, animals) {
+				log.Println("Config file altered. Read it and update list in all clients.")
 				if len(animals) > 0 {
 					// send animals to all clients
-					log.Println("Sending config file to all clients (Not implemented yet!)")
+					log.Println("Sending config file to all clients")
 					for _, v := range clientsTx {
 						v.sendConfigChangeRequest(animals)
 					}
-				//	use sendConfigChangeRequest in configTxHandler.go --> initialize one instance per client
 				}
-
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				log.Println("error while watching config file:", err)
+				curAnimals = animals
 			}
 		}
 	}()
-
-	err = watcher.Add(configFile)
-	if err != nil {
-		log.Fatal("Add failed:", err)
-	}
-
 }
 
 func main() {
 	fogNodePort := os.Getenv("SERVER_HOG_FOG_NODE_PORT")                // Default: ":3444"
 	dataSourceName := os.Getenv("SERVER_HOG_DATA_SOURCE_NAME")          // Default: "root:my_fog_password@(172.104.142.115:3306)/my_database"
 	configFile := os.Getenv("SERVER_HOG_CONFIG_FILE")                   // Default: "config.txt"
-	clientsConfigurationIPString := os.Getenv("SERVER_HOG_CONFIG_FILE") // Default: Default: "[\"localhost:3555\"]"
+	clientsConfigurationIPString := os.Getenv("SERVER_HOG_CLIENT_LIST") // Default: Default: "[\"localhost:3555\"]"
 
 	if fogNodePort == "" || dataSourceName == "" || configFile == "" || clientsConfigurationIPString == "" {
 		log.Printf("Environmental variables not initialized, using default values")
+
 		fogNodePort = ":3444"
 		dataSourceName = "root:my_fog_password@(172.104.142.115:3306)/my_database"
 		configFile = "config.txt"

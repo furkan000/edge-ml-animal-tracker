@@ -8,6 +8,8 @@ ExecStart=/srv/server_hog/hog
 
 Environment=SERVER_HOG_FOG_NODE_PORT=":3444"
 Environment=SERVER_HOG_DATA_SOURCE_NAME="root:my_fog_password@(172.104.142.115:3306)/my_database"
+Environment=SERVER_HOG_CONFIG_FILE="./config.txt"
+Environment=SERVER_HOG_CLIENT_LIST="[\"localhost:3555\"]"
 
 [Install]
 WantedBy=multi-user.target

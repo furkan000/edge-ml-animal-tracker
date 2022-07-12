@@ -35,6 +35,7 @@ func handleA(w mux.ResponseWriter, r *mux.Message) {
 	}
 
 	// update list of tracked animals
+	log.Printf("Updating tracked animals slice.")
 	handler.sliceTrackedNames = animals
 
 	err = w.SetResponse(codes.Content, message.TextPlain, bytes.NewReader([]byte("gg fam")))
@@ -51,8 +52,10 @@ func main() {
 	deviceUUIDString := os.Getenv("CLIENT_HOG_DEVICE_UUID")                     // Default: "352" (Doesn't matter)
 	initialTrackedAnimalsString := os.Getenv("CLIENT_HOG_TRACKED_ANIMALS")      // Default: "[\"Bear\",\"Racoon\",\"Gazelle\"]"
 	clientHogConfigRxPort := os.Getenv("CLIENT_HOG_LOCAL_CONFIG_RECEIVER_PORT") // Default: ":3555"
+
 	if cameraNodeTarget == "" || fogNodeTarget == "" || deviceUUIDString == "" || initialTrackedAnimalsString == "" || clientHogConfigRxPort == "" {
 		log.Printf("Environmental variables not initialized correctly, using default values")
+
 		cameraNodeTarget = "localhost:3333"
 		fogNodeTarget = "localhost:3444"
 		deviceUUIDString = "352"
@@ -137,7 +140,7 @@ func main() {
 			continue
 		}
 
-		log.Printf("New message: %s\n", string(p[:n]))
+		log.Printf("Trying to send new message: %s\t (Message might get filtered out)\n", string(p[:n]))
 		go handler.handleRequest(p[:n])
 	}
 }
