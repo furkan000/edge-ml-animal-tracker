@@ -1,5 +1,5 @@
 # WildFogs
-[Demo Video](demo/Demonstration.mp4)<br>
+[Demo Video](https://raw.githubusercontent.com/WildFogs/WildFogs/main/demo/Demonstration.mp4)<br>
 [Documentation PDF](documentation/Prototyping%20Assignment.pdf)
 
 ## Sales Pitch
