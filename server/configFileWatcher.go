@@ -49,7 +49,7 @@ func watchConfigFile(configFile string, clients []string) {
 
 		if len(curAnimals) > 0 {
 			// send animals to all clients
-			log.Println("Sending config file to all clients")
+			log.Println("Attempting to send config file to all clients")
 			for _, v := range clientsTx {
 				v.sendConfigChangeRequest(curAnimals)
 			}
