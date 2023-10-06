@@ -19,7 +19,7 @@ Tell visitors to stay clear of that area!
 3. run `go get`
 4. run `go run .`
 
-Alternatively use Docker (not recommended since editing config.txt is more cumbersome)
+Alternatively use Docker
 1. Navigate into the corrsponding folder
 2. run `docker run -it $(docker build -q .)`
 
